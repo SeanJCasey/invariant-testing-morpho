@@ -17,7 +17,20 @@ abstract contract ManagersTargets is
     Properties
 {
     // == ACTOR HANDLERS == //
-    
+
+    // /// @dev Start acting as another actor
+    // function switch_actor(uint256 entropy) public {
+    //     uint256 index = entropy % _getActors().length;
+    //     _switchActor(index);
+    // }
+
+
+    // /// @dev Starts using a new asset
+    // function switch_asset(uint256 entropy) public {
+    //     uint256 index = entropy % _getAssets().length;
+    //     _switchAsset(index);
+    // }
+
     /// @dev Start acting as another actor
     function switchActor(uint256 entropy) public {
         _switchActor(entropy);

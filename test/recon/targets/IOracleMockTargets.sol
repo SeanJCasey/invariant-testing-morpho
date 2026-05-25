@@ -10,15 +10,18 @@ import {vm} from "@chimera/Hevm.sol";
 // Helpers
 import {Panic} from "@recon/Panic.sol";
 
-abstract contract DoomsdayTargets is
+import "test/recon/mocks/IOracleMock.sol";
+
+abstract contract IOracleMockTargets is
     BaseTargetFunctions,
     Properties
 {
-    /// Makes a handler have no side effects
-    /// The fuzzer will call this anyway, and because it reverts it will be removed from shrinking
-    /// Replace the "withGhosts" with "stateless" to make the code clean
-    modifier stateless() {
-        _;
-        revert("stateless");
+    /// CUSTOM TARGET FUNCTIONS - Add your own target functions here ///
+
+
+    /// AUTO GENERATED TARGET FUNCTIONS - WARNING: DO NOT DELETE OR MODIFY THIS LINE ///
+
+    function iOracleMock_setPriceReturn(uint256 _value0) public asActor {
+        iOracleMock.setPriceReturn(_value0);
     }
 }

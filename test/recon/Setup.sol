@@ -13,31 +13,77 @@ import {AssetManager} from "@recon/AssetManager.sol";
 import {Utils} from "@recon/Utils.sol";
 
 // Your deps
-import "src/Counter.sol";
+import "src/Morpho.sol";
+import {IIrmMock} from "./mocks/IIrmMock.sol";
+import {IMorphoFlashLoanCallbackMock} from "./mocks/IMorphoFlashLoanCallbackMock.sol";
+// import {IMorphoLiquidateCallbackMock} from "./mocks/IMorphoLiquidateCallbackMock.sol";
+// import {IMorphoRepayCallbackMock} from "./mocks/IMorphoRepayCallbackMock.sol";
+// import {IMorphoSupplyCallbackMock} from "./mocks/IMorphoSupplyCallbackMock.sol";
+// import {IMorphoSupplyCollateralCallbackMock} from "./mocks/IMorphoSupplyCollateralCallbackMock.sol";
+import {IOracleMock} from "./mocks/IOracleMock.sol";
 
 abstract contract Setup is BaseSetup, ActorManager, AssetManager, Utils {
-    Counter counter;
+    Morpho morpho;
+
+    IIrmMock iIrmMock;
+    IMorphoFlashLoanCallbackMock iMorphoFlashLoanCallbackMock;
+    // IMorphoLiquidateCallbackMock iMorphoLiquidateCallbackMock;
+    // IMorphoRepayCallbackMock iMorphoRepayCallbackMock;
+    // IMorphoSupplyCallbackMock iMorphoSupplyCallbackMock;
+    // IMorphoSupplyCollateralCallbackMock iMorphoSupplyCollateralCallbackMock;
+    IOracleMock iOracleMock;
+
+    address owner = address(0xABCD);
+
+    MarketParams[] allMarketParams;
+    MarketParams activeMarketParams;
+
+    bool hasRepaid;
 
     /// === Setup === ///
     /// This contains all calls to be performed in the tester constructor, both for Echidna and Foundry
     function setup() internal virtual override {
-        // New Actor, beside address(this)
-        _addActor(address(0x411c3));
-        _newAsset(18); // New 18 decimals token
+        morpho = new Morpho(owner);
 
-        counter = new Counter();
+        // Required mocks
+        iIrmMock = new IIrmMock();
+        iMorphoFlashLoanCallbackMock = new IMorphoFlashLoanCallbackMock();
+        // iMorphoLiquidateCallbackMock = new IMorphoLiquidateCallbackMock();
+        // iMorphoRepayCallbackMock = new IMorphoRepayCallbackMock();
+        // iMorphoSupplyCallbackMock = new IMorphoSupplyCallbackMock();
+        // iMorphoSupplyCollateralCallbackMock = new IMorphoSupplyCollateralCallbackMock();
+        iOracleMock = new IOracleMock();
 
-        // Mints to all actors and approves allowances to the counter
+        // Enable our mock IRM
+        vm.prank(owner);
+        morpho.enableIrm(address(iIrmMock));
+
+        _addActor(address(0xAAAA));
+        _addActor(address(0xBBBB));
+        _addActor(address(0xCCCC));
+        // Callback mocks as actors
+        // _addActor(address(iMorphoFlashLoanCallbackMock));
+        // _addActor(address(iMorphoLiquidateCallbackMock));
+        // _addActor(address(iMorphoRepayCallbackMock));
+        // _addActor(address(iMorphoSupplyCallbackMock));
+        // _addActor(address(iMorphoSupplyCollateralCallbackMock));
+
+        _newAsset(18);
+        _newAsset(8);
+        _newAsset(6);
+
         address[] memory approvalArray = new address[](1);
-        approvalArray[0] = address(counter);
+        approvalArray[0] = address(morpho);
         _finalizeAssetDeployment(_getActors(), approvalArray, type(uint88).max);
+
+        // Starts with activeMarketParams empty
     }
 
     /// === MODIFIERS === ///
     /// Prank admin and actor
-    
+
     modifier asAdmin {
-        vm.startPrank(address(this));
+        vm.startPrank(owner);
         _;
         vm.stopPrank();
     }
@@ -46,5 +92,52 @@ abstract contract Setup is BaseSetup, ActorManager, AssetManager, Utils {
         vm.startPrank(address(_getActor()));
         _;
         vm.stopPrank();
+    }
+
+    modifier asFlashLoanCallback {
+        vm.startPrank(address(iMorphoFlashLoanCallbackMock));
+        _;
+        vm.stopPrank();
+    }
+
+    /// === HELPERS === ///
+    /// Add helper functions here, e.g., to create markets, manipulate state, etc.
+
+    function add_market(uint256 loanTokenEntropy, uint256 collateralTokenEntropy, uint256 lltv) public {
+        // Grab tokens to use
+        uint256 assetsLength = _getAssets().length;
+        uint256 loanTokenIndex = loanTokenEntropy % assetsLength;
+        _switchAsset(loanTokenIndex);
+        address loanToken = _getAsset();
+        uint256 collateralTokenIndex = collateralTokenEntropy % assetsLength;
+        _switchAsset(collateralTokenIndex);
+        address collateralToken = _getAsset();
+
+        MarketParams memory marketParams = MarketParams({
+            loanToken: loanToken,
+            collateralToken: collateralToken,
+            oracle: address(iOracleMock),
+            irm: address(iIrmMock),
+            lltv: lltv
+        });
+
+        vm.prank(owner);
+        morpho.enableLltv(lltv);
+
+        morpho.createMarket(marketParams);
+
+        allMarketParams.push(marketParams);
+
+        // Switch to market (not really necessary)
+        activeMarketParams = marketParams;
+    }
+
+    function _getActorThenSwitchActor(uint256 actorEntropy) internal returns (address prevActor) {
+        address actor = _getActor();
+
+        uint256 actorIndex = actorEntropy % _getActors().length;
+        _switchActor(actorIndex);
+
+        return actor;
     }
 }

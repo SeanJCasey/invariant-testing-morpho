@@ -9,46 +9,70 @@ import {Panic} from "@recon/Panic.sol";
 
 // Targets
 // NOTE: Always import and apply them in alphabetical order, so much easier to debug!
-import {AdminTargets} from "./targets/AdminTargets.sol";
-import {DoomsdayTargets} from "./targets/DoomsdayTargets.sol";
-import {ManagersTargets} from "./targets/ManagersTargets.sol";
+import { AdminTargets } from "./targets/AdminTargets.sol";
+import { DoomsdayTargets } from "./targets/DoomsdayTargets.sol";
+import { IIrmMockTargets } from "./targets/IIrmMockTargets.sol";
+import { IOracleMockTargets } from "./targets/IOracleMockTargets.sol";
+import { ManagersTargets } from "./targets/ManagersTargets.sol";
+import { MorphoTargets } from "./targets/MorphoTargets.sol";
+
+import "../../src/Morpho.sol";
 
 abstract contract TargetFunctions is
     AdminTargets,
     DoomsdayTargets,
-    ManagersTargets
+    IIrmMockTargets,
+    IOracleMockTargets,
+    ManagersTargets,
+    MorphoTargets
 {
-    function counter_increment() public updateGhosts asActor {
-        counter.increment();
+    /// CUSTOM TARGET FUNCTIONS - Add your own target functions here ///
+
+    function shortcut_liquidate_all_collateral() public {
+        // address borrower = _getActorThenSwitchActor(senderEntropy); 
+
+        Id id = MarketParamsLib.id(activeMarketParams);
+        (,,uint128 collateral) = morpho.position(id, _getActor());
+
+        morpho_liquidate_clamped_assets(collateral);
     }
 
-    function counter_setNumber1(uint256 newNumber) public updateGhosts asActor {
-        // example assertion test replicating testFuzz_SetNumber
-        try counter.setNumber(newNumber) {
-            if (newNumber != 0) {
-                t(counter.number() == newNumber, "number != newNumber");
-            }
-        } catch (bytes memory err) {
-            bool expectedError;
-            // checks for custom errors and panics
-            expectedError = 
-                checkError(err, "abc") || // error string from require statement
-                checkError(err, "CustomError()") || // custom error
-                checkError(err, Panic.arithmeticPanic); // compiler panic errors
-            t(expectedError, "unexpected error");
-        }
+    function switch_market(uint256 marketEntropy) public {
+        uint256 index = marketEntropy % allMarketParams.length;
+        activeMarketParams = allMarketParams[index];
     }
 
-    function counter_setNumber2(uint256 newNumber) public asActor {
-        // same example assertion test as counter_setNumber1 using ghost variables
-        __before();
+    function shortcut_setAuthorizationWithSig_validAuthorization(
+        uint256 authorizerPrivateKey,
+        address authorized,
+        bool isAuthorized,
+        uint256 nonce,
+        uint256 deadline
+    ) public {
+        address authorizer = vm.addr(authorizerPrivateKey);
+        // uint256 nonce = morpho.nonce(authorizer);
 
-        counter.setNumber(newNumber);
+        Authorization memory authorization = Authorization({
+            authorizer: authorizer,
+            authorized: authorized,
+            isAuthorized: isAuthorized,
+            nonce: nonce,
+            deadline: deadline
+        });
 
-        __after();
+        bytes32 hashStruct = keccak256(abi.encode(AUTHORIZATION_TYPEHASH, authorization));
+        bytes32 digest = keccak256(bytes.concat("\x19\x01", morpho.DOMAIN_SEPARATOR(), hashStruct));
 
-        if (newNumber != 0) {
-            t(_after.counter_number == newNumber, "number != newNumber");
-        }
+        (uint8 v, bytes32 r, bytes32 s) = vm.sign(authorizerPrivateKey, digest);
+
+        Signature memory signature = Signature({
+            v: v,
+            r: r,
+            s: s
+        });
+
+        morpho_setAuthorizationWithSig(authorization, signature);
     }
+
+    /// AUTO GENERATED TARGET FUNCTIONS - WARNING: DO NOT DELETE OR MODIFY THIS LINE ///
 }

@@ -1,0 +1,5 @@
+{
+    "recon.defaultFuzzer": "Echidna",
+    "recon.echidna.workers": 8,
+    "recon.mocksFolderPath": "test/recon/mocks"
+}
