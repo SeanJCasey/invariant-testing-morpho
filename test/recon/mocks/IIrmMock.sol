@@ -8,7 +8,6 @@ contract IIrmMock {
     //||                                                             ||
     //<>=============================================================<>
 
-
     //<>=============================================================<>
     //||                                                             ||
     //||                    SETTER FUNCTIONS                         ||
@@ -23,7 +22,6 @@ contract IIrmMock {
     function setBorrowRateViewReturn(uint256 _value0) public {
         _borrowRateViewReturn_0 = _value0;
     }
-
 
     /*******************************************************************
      *   ⚠️ WARNING ⚠️ WARNING ⚠️ WARNING ⚠️ WARNING ⚠️ WARNING ⚠️  *
@@ -56,7 +54,6 @@ contract IIrmMock {
         uint128 fee;
     }
 
-
     //<>=============================================================<>
     //||                                                             ||
     //||        ⚠️  EVENTS DEFINITIONS - DO NOT MODIFY  ⚠️          ||
@@ -77,13 +74,18 @@ contract IIrmMock {
     //||                                                             ||
     //<>=============================================================<>
     // Mock implementation of borrowRate
-    function borrowRate(MarketParams memory marketParams, Market memory market) public view returns (uint256) {
+    function borrowRate(
+        MarketParams memory /* marketParams */,
+        Market memory /* market */
+    ) public view returns (uint256) {
         return _borrowRateReturn_0;
     }
 
     // Mock implementation of borrowRateView
-    function borrowRateView(MarketParams memory marketParams, Market memory market) public view returns (uint256) {
+    function borrowRateView(
+        MarketParams memory /* marketParams */,
+        Market memory /* market */
+    ) public view returns (uint256) {
         return _borrowRateViewReturn_0;
     }
-
 }
