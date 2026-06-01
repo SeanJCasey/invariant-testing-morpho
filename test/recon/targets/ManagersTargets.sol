@@ -8,6 +8,8 @@ import {vm} from "@chimera/Hevm.sol";
 
 import {MockERC20} from "@recon/MockERC20.sol";
 
+import "../../../src/Morpho.sol";
+
 // Target functions that are effectively inherited from the Actor and AssetManagers
 // Once properly standardized, managers will expose these by default
 // Keeping them out makes your project more custom
@@ -28,6 +30,10 @@ abstract contract ManagersTargets is BaseTargetFunctions, Properties {
         activeMarketParams = allMarketParams[entropy];
     }
 
+    function switch_onBehalf(uint256 entropy) public {
+        activeOnBehalf = _getActors()[entropy];
+    }
+
     /// @dev Deploy a new token and add it to the list of assets, then set it as the current asset
     function add_new_asset(uint8 decimals) public returns (address) {
         address newAsset = _newAsset(decimals);
@@ -43,12 +49,15 @@ abstract contract ManagersTargets is BaseTargetFunctions, Properties {
     function asset_approve(
         address to,
         uint128 amt
-    ) public updateGhosts asActor {
+    ) public updateGhosts(OpType.DEFAULT) asActor {
         MockERC20(_getAsset()).approve(to, amt);
     }
 
     /// @dev Mint to arbitrary address, uses owner by default, even though MockERC20 doesn't check
-    function asset_mint(address to, uint128 amt) public updateGhosts asAdmin {
+    function asset_mint(
+        address to,
+        uint128 amt
+    ) public updateGhosts(OpType.DEFAULT) asAdmin {
         MockERC20(_getAsset()).mint(to, amt);
     }
 }

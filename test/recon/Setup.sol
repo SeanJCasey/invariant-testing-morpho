@@ -13,13 +13,15 @@ import {AssetManager} from "@recon/AssetManager.sol";
 import {Utils} from "@recon/Utils.sol";
 
 // Your deps
-import "src/Morpho.sol";
+import {Id, IMorpho, Market, MarketParams} from "src/interfaces/IMorpho.sol";
+import {MarketParamsLib} from "src/libraries/MarketParamsLib.sol";
+import {Morpho} from "src/Morpho.sol";
 import {IIrmMock} from "./mocks/IIrmMock.sol";
 import {IMorphoFlashLoanCallbackMock} from "./mocks/IMorphoFlashLoanCallbackMock.sol";
 import {IOracleMock} from "./mocks/IOracleMock.sol";
 
 abstract contract Setup is BaseSetup, ActorManager, AssetManager, Utils {
-    Morpho morpho;
+    IMorpho morpho;
 
     IIrmMock iIrmMock;
     IMorphoFlashLoanCallbackMock iMorphoFlashLoanCallbackMock;
@@ -27,16 +29,17 @@ abstract contract Setup is BaseSetup, ActorManager, AssetManager, Utils {
 
     address owner = address(0xABCD);
 
-    // Bounded var arrays
+    // Tracked var sets
     MarketParams[] allMarketParams;
 
-    // Current bounded var
+    // Current tracked var
     MarketParams activeMarketParams; // bound to allMarketParams set
+    address activeOnBehalf;
 
     /// === Setup === ///
     /// This contains all calls to be performed in the tester constructor, both for Echidna and Foundry
     function setup() internal virtual override {
-        morpho = new Morpho(owner);
+        morpho = IMorpho(address(new Morpho(owner)));
 
         // Required mocks
         iIrmMock = new IIrmMock();
@@ -117,5 +120,19 @@ abstract contract Setup is BaseSetup, ActorManager, AssetManager, Utils {
 
         // Switch to market (not really necessary)
         activeMarketParams = marketParams;
+    }
+
+    function _formatId(
+        MarketParams memory marketParams
+    ) internal pure returns (Id) {
+        return MarketParamsLib.id(marketParams);
+    }
+
+    function _marketBalanceOfLoanToken(
+        MarketParams memory marketParams
+    ) internal view returns (uint256) {
+        Market memory market = morpho.market(_formatId(marketParams));
+
+        return market.totalSupplyAssets - market.totalBorrowAssets;
     }
 }

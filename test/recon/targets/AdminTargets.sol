@@ -12,10 +12,7 @@ import {Panic} from "@recon/Panic.sol";
 
 import "src/Morpho.sol";
 
-abstract contract AdminTargets is
-    BaseTargetFunctions,
-    Properties
-{
+abstract contract AdminTargets is BaseTargetFunctions, Properties {
     /// CUSTOM TARGET FUNCTIONS - Add your own target functions here ///
 
     function morpho_enableIrm(address irm) public asAdmin {
@@ -30,12 +27,14 @@ abstract contract AdminTargets is
         morpho.setFee(activeMarketParams, newFee);
     }
 
-    function morpho_setFeeRecipient(address newFeeRecipient) public asAdmin {
-        morpho.setFeeRecipient(newFeeRecipient);
+    function morpho_setFeeRecipient() public asAdmin {
+        // bound recipient to actor set (for fee shares tracking)
+        morpho.setFeeRecipient(_getActor());
     }
 
     function morpho_setOwner(address newOwner) public asAdmin {
         morpho.setOwner(newOwner);
+        owner = newOwner;
     }
 
     /// AUTO GENERATED TARGET FUNCTIONS - WARNING: DO NOT DELETE OR MODIFY THIS LINE ///

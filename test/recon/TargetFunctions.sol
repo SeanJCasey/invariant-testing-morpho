@@ -28,11 +28,13 @@ abstract contract TargetFunctions is
 {
     /// CUSTOM TARGET FUNCTIONS - Add your own target functions here ///
 
-    function shortcut_liquidate_all_collateral() public {
+    function shortcut_liquidate_all_collateral(address borrower) public {
         Id id = MarketParamsLib.id(activeMarketParams);
-        (, , uint128 collateral) = morpho.position(id, _getActor());
 
-        morpho_liquidate_clamped_assets(collateral);
+        morpho_liquidate_clamped_assets(
+            borrower,
+            morpho.position(id, borrower).collateral
+        );
     }
 
     function shortcut_setAuthorizationWithSig_validAuthorization(
